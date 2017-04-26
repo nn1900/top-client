@@ -1,6 +1,8 @@
 # top-client
 Taobao open client for python
 
+__Note__: only python 3.x is supported for now , but support for python 2.x is on the way...
+
 ## Usage
 
 ```python
@@ -33,7 +35,7 @@ try:
         'search_type': 'SEARCH'
     })
     print(result)
-exception Exception as ex:
+except Exception as ex:
     print(ex)
 
 # invoke specific api method if available
@@ -53,3 +55,7 @@ try:
 except Exception as ex:
     print(ex)
 ```
+
+## TODO
+- Add more API specific methods
+- Add Python 2.x support
