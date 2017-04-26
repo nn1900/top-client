@@ -1,9 +1,3 @@
-# top-client
-Taobao open client for python
-
-## Usage
-
-```python
 from topclient import TopClient
 
 APP_KEY = "app key"
@@ -19,8 +13,8 @@ client = TopClient(
     debug=True
 )
 
-# invoke general `request` method
 try:
+    # invoke general `request` method
     result = client.request('taobao.simba.rpt.adgroupkeywordeffect.get', {
         'nick': 'nick',
         'campaign_id': 2311036,
@@ -33,11 +27,8 @@ try:
         'search_type': 'SEARCH'
     })
     print(result)
-exception Exception as ex:
-    print(ex)
 
-# invoke specific api method if available
-try:
+    # invoke specific api method if available
     result = client.get_adgroup_effect_rpt(
         nick='nick',
         campaign_id=2311036,
@@ -52,4 +43,3 @@ try:
     print(result)
 except Exception as ex:
     print(ex)
-```
