@@ -281,6 +281,19 @@ class TopClient:
 
         return results
 
+    def get_adgroup_keywords(self, adgroup_id, nick=None):
+        """
+        Get all the keywords of the given adgroup.
+        :param adgroup_id:adgroup id
+        :param nick: user nick
+        :return: keyword list
+        :raises TopException: api exception
+        """
+        return self.request(
+            "taobao.simba.keywordsbyadgroupid.get",
+            adgroup_id=adgroup_id,
+            nick=nick
+        )
 
         # TODO: add more api methods
 
@@ -351,9 +364,11 @@ class _Request:
 # API response parsers used to extract api specific result object(s)
 _api_result_parsers = {
     "taobao.simba.rpt.adgroupkeywordbase.get":
-        lambda res: res.get("rpt_adgroupkeyword_base_list", None),
+        lambda x: x.get("rpt_adgroupkeyword_base_list", None),
     "taobao.simba.rpt.adgroupkeywordeffect.get":
-        lambda res: res.get("rpt_adgroupkeyword_effect_list", None),
+        lambda x: x.get("rpt_adgroupkeyword_effect_list", None),
     "taobao.simba.keywords.qscore.split.get":
-        lambda res: res["result"]["result"]["word_score_list"]["wordscorelist"]
+        lambda x: x["result"]["result"]["word_score_list"]["wordscorelist"],
+    "taobao.simba.keywordsbyadgroupid.get":
+        lambda x: x["keywords"]["keyword"]
 }
