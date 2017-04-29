@@ -22,38 +22,56 @@ client = TopClient(
 )
 
 # invoke general `request` method
-try:
-    result = client.request('taobao.simba.rpt.adgroupkeywordeffect.get', {
-        'nick': 'nick',
-        'campaign_id': 2311036,
-        'adgroup_id': 739459266,
-        'start_time': '2017-04-17',
-        'end_time': '2017-04-24',
-        'source': '1',
-        'page_no': 1,
-        'page_size': 500,
-        'search_type': 'SEARCH'
-    })
-    print(result)
-except Exception as ex:
-    print(ex)
+result = client.request('taobao.simba.rpt.adgroupkeywordeffect.get', {
+    'nick': 'nick',
+    'campaign_id': 2311036,
+    'adgroup_id': 739459266,
+    'start_time': '2017-04-17',
+    'end_time': '2017-04-24',
+    'source': '1',
+    'page_no': 1,
+    'page_size': 500,
+    'search_type': 'SEARCH'
+})
+
+# invoke general `request` method w/ named params
+result = client.request('taobao.simba.rpt.adgroupkeywordeffect.get',
+    nick='nick',
+    campaign_id=2311036,
+    adgroup_id=739459266,
+    start_time='2017-04-17',
+    end_time='2017-04-24',
+    source='1',
+    page_no=1,
+    page_size=500,
+    search_type='SEARCH'
+)
 
 # invoke specific api method if available
-try:
-    result = client.get_adgroup_effect_rpt(
-        nick='nick',
-        campaign_id=2311036,
-        adgroup_id=739459266,
-        start_time='2017-04-17',
-        end_time='2017-04-24',
-        source='1',
-        page_no=1,
-        page_size=500,
-        search_type='SEARCH'
-    )
-    print(result)
-except Exception as ex:
-    print(ex)
+result = client.get_adgroup_effect_rpt(
+    nick='nick',
+    campaign_id=2311036,
+    adgroup_id=739459266,
+    start_time='2017-04-17',
+    end_time='2017-04-24',
+    source='1',
+    page_no=1,
+    page_size=500,
+    search_type='SEARCH'
+)
+
+# invoke vai api name
+result = client.simba.rpt.adgroupkeywordeffect.get(
+    nick='nick',
+    campaign_id=2311036,
+    adgroup_id=739459266,
+    start_time='2017-04-17',
+    end_time='2017-04-24',
+    source='1',
+    page_no=1,
+    page_size=500,
+    search_type='SEARCH'
+)
 ```
 
 ## TODO

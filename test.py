@@ -14,7 +14,7 @@ client = TopClient(
 )
 
 try:
-    # invoke general `request` method
+    # invoke general `request` method w/ params
     result = client.request('taobao.simba.rpt.adgroupkeywordeffect.get', {
         'nick': 'nick',
         'campaign_id': 2311036,
@@ -28,8 +28,36 @@ try:
     })
     print(result)
 
+    # invoke general `request` method w/ named params
+    result = client.request('taobao.simba.rpt.adgroupkeywordeffect.get',
+        nick='nick',
+        campaign_id=2311036,
+        adgroup_id=739459266,
+        start_time='2017-04-17',
+        end_time='2017-04-24',
+        source='1',
+        page_no=1,
+        page_size=500,
+        search_type='SEARCH'
+    )
+    print(result)
+
     # invoke specific api method if available
     result = client.get_adgroup_effect_rpt(
+        nick='nick',
+        campaign_id=2311036,
+        adgroup_id=739459266,
+        start_time='2017-04-17',
+        end_time='2017-04-24',
+        source='1',
+        page_no=1,
+        page_size=500,
+        search_type='SEARCH'
+    )
+    print(result)
+
+    # invoke vai api name
+    result = client.simba.rpt.adgroupkeywordeffect.get(
         nick='nick',
         campaign_id=2311036,
         adgroup_id=739459266,

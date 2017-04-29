@@ -1,3 +1,30 @@
+##############################################################################
+# MIT License
+#
+# Copyright (c) 2017 Eric Xu <eric.blueplus@gmail.com>
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+##############################################################################
+
+__version__ = "0.1.0"
+__author__ = "eric <eric.blueplus@gmail.com>"
+
 import hashlib
 import http.client
 import json
@@ -5,7 +32,6 @@ import json
 from urllib.parse import urlparse
 from urllib.parse import urlencode
 from datetime import datetime
-
 
 class TopClient:
     """
@@ -55,7 +81,8 @@ class TopClient:
                 method="get",
                 version="2.0",
                 timestamp=None,
-                timeout=30
+                timeout=30,
+                **kwargs
                 ):
         """
         Make a taobao open API request
@@ -72,9 +99,13 @@ class TopClient:
         :raises TopException: API related exception
         """
         if params is None:
-            raise Exception("params is required")
+            params = kwargs
+        else:
+            params = params.copy()
+            params.update(kwargs)
 
-        api_specific_params = params
+        api_specific_params = {k: v for k, v in params.items() if
+                               v is not None}
         common_params = {
             "app_key": self.appkey,
             "method": apiname,
@@ -82,7 +113,7 @@ class TopClient:
             "format": format,
             "sign_method": "md5",
             "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "partner_id": "taobao-sdk-python-20170425"
+            "partner_id": "python-topclient-%s" % __version__
         }
 
         params = api_specific_params.copy()
@@ -144,23 +175,46 @@ class TopClient:
         if response.status is not 200:
             raise RequestException("Error sending request: %s" % result)
 
-        resultobj = json.loads(result)
+        resultobj = json.loads(
+            result.decode('utf8'),
+            object_hook=lambda x: _JSONObj(x)
+        )
 
+        return self._handle_result(apiname, resultobj, response)
+
+    def __getattr__(self, name):
+        return _Request(self.request, "taobao.%s" % name)
+
+
+    def _handle_result(self, name, resultobj, response):
+        self._check_error_response(resultobj, response)
+        prop = name[7:].replace(".", "_") + "_response"
+        resultobj = resultobj[prop]
+        parser = _api_result_parsers.get(name, None)
+        if parser is not None:
+            resultobj = parser(resultobj)
+        if type(resultobj) == dict and \
+           "code" in resultobj and "msg" in resultobj:
+            self._raise_api_exception(resultobj)
+        return resultobj
+
+    def _check_error_response(self, resultobj, response=None):
         if "error_response" in resultobj:
             errorobj = resultobj["error_response"]
-            exception = TopException(
-                errorcode=errorobj.get("code", None),
-                message=errorobj.get("msg", None),
-                subcode=errorobj.get("sub_code", None),
-                submsg=errorobj.get("sub_msg", None),
-                application_host=response.getheader("Application-Host", ""),
-                service_host=response.getheader("Location-Host", "")
-            )
-            raise exception
+            self._raise_api_exception(errorobj, response)
 
-        response_prop_name = apiname[7:].replace(".", "_") + "_response"
-
-        return resultobj[response_prop_name]
+    def _raise_api_exception(self, errorobj, response=None):
+        exception = TopException(
+            errorcode=errorobj.get("code", None),
+            message=errorobj.get("msg", None),
+            subcode=errorobj.get("sub_code", None),
+            submsg=errorobj.get("sub_msg", None),
+            application_host=response.getheader("Application-Host",
+                                                "") if response else None,
+            service_host=response.getheader("Location-Host",
+                                            "") if response else None
+        )
+        raise exception
 
     # -----------------------------------------------------------------
     # The following methods implement convenient API specific requests
@@ -172,8 +226,10 @@ class TopClient:
         :param kwargs: api params
         :return: base report list
         """
-        res = self.request("taobao.simba.rpt.adgroupkeywordbase.get", kwargs)
-        return res.get("rpt_adgroupkeyword_base_list", None)
+        return self.request(
+            "taobao.simba.rpt.adgroupkeywordbase.get",
+            **kwargs
+        )
 
     def get_adgroup_effect_rpt(self, **kwargs):
         """
@@ -181,10 +237,52 @@ class TopClient:
         :param kwargs: api params
         :return: effect report list
         """
-        res = self.request("taobao.simba.rpt.adgroupkeywordeffect.get", kwargs)
-        return res.get("rpt_adgroupkeyword_effect_list", None)
+        return self.request(
+            "taobao.simba.rpt.adgroupkeywordeffect.get",
+            **kwargs
+        )
 
-    # TODO: add more api methods
+    def get_keywords_qscore(self, adgroup_id, keyword_ids, nick=None):
+        """
+        Get qscore of the given keywords (max 20)
+        :param adgroup_id: adgroup id
+        :param keyword_ids: keyword id list
+        :param nick: user nick
+        :return: keyword qscore list
+        :raises Exception: argument exception
+        :raises TopException: api exeption
+        """
+        if len(keyword_ids) > 20:
+            raise Exception("too many keywords qscores to fetch (max 20).")
+
+        return self.request(
+            "taobao.simba.keywords.qscore.split.get",
+            nick=nick,
+            ad_group_id=adgroup_id,
+            bidword_ids=",".join(str(x) for x in keyword_ids)
+        )
+
+    def get_keywords_qscore_all(self, adgroup_id, keyword_ids, nick=None):
+        """
+        Get all qscore of the given keywords.
+        :param adgroup_id: adgroup id
+        :param keyword_ids: keyword id list
+        :param nick: user nick
+        :return: keyword qscore ist
+        :raises TopException: api exeption
+        """
+        start = 0
+        results = []
+        while start < len(keyword_ids):
+            batch_keyword_ids = keyword_ids[start:start + 20]
+            res = self.get_keywords_qscore(adgroup_id, batch_keyword_ids, nick)
+            results.extend(res)
+            start += 20
+
+        return results
+
+
+        # TODO: add more api methods
 
 
 class RequestException(Exception):
@@ -198,6 +296,7 @@ class TopException(Exception):
     """
     Taobao Open API exception
     """
+
     def __init__(self,
                  errorcode=None,
                  message=None,
@@ -214,5 +313,47 @@ class TopException(Exception):
         self.service_host = service_host
 
     def __str__(self):
-        return "errorcode=%s, message=%s, subcode=%s, submsg=%s" % \
+        return "TopException: errorcode=%s, message=%s, subcode=%s, submsg=%s" % \
                (self.errorcode, self.message, self.subcode, self.submsg)
+
+
+class _JSONObj(dict):
+    """Makes a dictionary behave like an object."""
+
+    def __getattr__(self, name):
+        try:
+            return self[name.lower()]
+        except KeyError:
+            raise AttributeError(name)
+
+    def __setattr__(self, name, value):
+        self[name.lower] = value
+
+
+class _Request:
+    """
+    Helper class that converts `client.foo.bar.baz()` to
+    `client.request('foo.bar.baz', ...)` call to support call `TopClient`
+    with direct taobao open api names.
+    """
+
+    def __init__(self, request, name):
+        self.request = request
+        self.name = name
+
+    def __getattr__(self, name):
+        return _Request(self.request, "%s.%s" % (self.name, name))
+
+    def __call__(self, *args, **kwargs):
+        return self.request(self.name, *args, **kwargs)
+
+
+# API response parsers used to extract api specific result object(s)
+_api_result_parsers = {
+    "taobao.simba.rpt.adgroupkeywordbase.get":
+        lambda res: res.get("rpt_adgroupkeyword_base_list", None),
+    "taobao.simba.rpt.adgroupkeywordeffect.get":
+        lambda res: res.get("rpt_adgroupkeyword_effect_list", None),
+    "taobao.simba.keywords.qscore.split.get":
+        lambda res: res["result"]["result"]["word_score_list"]["wordscorelist"]
+}
